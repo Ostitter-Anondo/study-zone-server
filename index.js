@@ -12,9 +12,7 @@ const port = process.env.PORT || 3000;
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-    ],
+    origin: ["http://localhost:5173"],
     credentials: true,
   })
 );
@@ -53,6 +51,7 @@ const userCol = database.collection("users");
 const reviewCol = database.collection("reviews");
 const noteCol = database.collection("notes");
 const sessionCol = database.collection("sessions");
+const materialCol = database.collection("materials");
 const pendingCol = database.collection("pendings");
 const rejectedCol = database.collection("rejected");
 const bookedCol = database.collection("booked");
@@ -107,9 +106,18 @@ app.get("/jwtverify", verifyToken, async (req, res) => {
 
 // auth stuff
 
-app.get("/login", async(req, res) => {
-  console.log(req.cookies);
-})
+app.get("/login", async (req, res) => {
+  const token = req.cookies.studyzonetoken;
+  if (!token) {
+    return res.send("no token");
+  }
+  jwt.verify(token, process.env.TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.send("token fny");
+    }
+    console.log(decoded);
+  });
+});
 
 app.get("/user/:id", async (req, res) => {
   const query = { uid: req.params.id };
@@ -132,4 +140,15 @@ app.post("/newuser", async (req, res) => {
   console.log(`creating new user with data`, newUser);
   const result = await userCol.insertOne(newUser);
   res.send(result);
+});
+
+// role verification
+
+app.get("/rolecheck", verifyToken, async (req, res) => {
+  console.log(`role check requested`);
+  const query = { uid: req.user.uid };
+  const options = { projection: { _id: 0, role: 1 } };
+  const user = await userCol.findOne(query, options);
+  console.log(user);
+  res.send(user);
 });
