@@ -205,6 +205,21 @@ app.get("/sessions", async (req, res) => {
 	res.send(sessions);
 });
 
+app.get("/countapproved", async (req, res) => {
+  const count = await sessionCol.countDocuments({status: "approved"});
+  res.send({count})
+})
+
+app.get("/allapproved", async (req, res) => {
+  const page = Number(req.query.page);
+  const size = 6;
+  console.log(page)
+	const filter = { status: "approved" };
+  const cursor = sessionCol.find(filter).skip(size*page).limit(size);
+  const sessions = await cursor.toArray();
+  res.send(sessions);
+});
+
 app.get("/mysessions/:uid", async (req, res) => {
 	console.log(req.params.uid);
 	const query = { uid: req.params.uid };
