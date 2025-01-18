@@ -54,8 +54,6 @@ const reviewCol = database.collection("reviews");
 const noteCol = database.collection("notes");
 const sessionCol = database.collection("sessions");
 const materialCol = database.collection("materials");
-const pendingCol = database.collection("pendings");
-const rejectedCol = database.collection("rejected");
 const bookedCol = database.collection("booked");
 
 // general landing
@@ -111,14 +109,18 @@ app.get("/jwtverify", verifyToken, async (req, res) => {
 app.get("/login", async (req, res) => {
 	const token = req.cookies.studyzonetoken;
 	if (!token) {
-		return res.send("no token");
+		return res.send({ message: "no token" });
 	}
 	jwt.verify(token, process.env.TOKEN_SECRET, (err, decoded) => {
 		if (err) {
-			return res.send("token fny");
+			return res.send({ message: "token fny" });
 		}
 		console.log(decoded);
 	});
+	const material = await materialCol.findOne({
+		sessId: "678b8920caf8fbd4b6e5b9c3",
+	});
+	res.send({ message: "moja", material });
 });
 
 app.get("/user/:id", async (req, res) => {
@@ -182,16 +184,20 @@ app.get("/sessions", async (req, res) => {
 	res.send(sessions);
 });
 
-app.get("/pendings", async (req, res) => {
-	const cursor = pendingCol.find();
-	const pendings = await cursor.toArray();
-	res.send(pendings);
+app.get("/mysessions/:uid", async (req, res) => {
+	console.log(req.params.uid);
+	const query = { uid: req.params.uid };
+	const cursor = sessionCol.find(query);
+	const sessions = await cursor.toArray();
+	res.send(sessions);
 });
 
-app.get("/rejecteds", async (req, res) => {
-	const cursor = rejectedCol.find();
-	const rejected = await cursor.toArray();
-	res.send(rejected);
+app.get("/myapproved/:uid", async (req, res) => {
+	console.log(req.params.uid);
+	const query = { uid: req.params.uid, status: "approved" };
+	const cursor = sessionCol.find(query);
+	const sessions = await cursor.toArray();
+	res.send(sessions);
 });
 
 app.post("/newsession", verifyToken, async (req, res) => {
@@ -204,20 +210,20 @@ app.post("/newsession", verifyToken, async (req, res) => {
 });
 
 app.put("/editsession", verifyToken, async (req, res) => {
-  console.log(req.body);
+	console.log(req.body);
 	const filter = { _id: ObjectId.createFromHexString(req.body.sessId) };
 	const updatedSess = { $set: req.body.data };
-  const options = { upsert: false };
-  const result = await sessionCol.updateOne(filter, updatedSess, options);
-  res.send({message: "Session was successfully edited", result});
-})
+	const options = { upsert: false };
+	const result = await sessionCol.updateOne(filter, updatedSess, options);
+	res.send({ message: "Session was successfully edited", result });
+});
 
 app.put("/approved", verifyToken, async (req, res) => {
 	console.log("approval call");
 	const filter = { _id: ObjectId.createFromHexString(req.body.sessId) };
 	const updatedSess = { $set: req.body.data };
-  const options = { upsert: false };
-  const result = await sessionCol.updateOne(filter, updatedSess, options);
+	const options = { upsert: false };
+	const result = await sessionCol.updateOne(filter, updatedSess, options);
 	res.send({ message: "Session was successfully approved", result });
 });
 
@@ -225,13 +231,37 @@ app.put("/rejected", verifyToken, async (req, res) => {
 	console.log("rejection call");
 	const filter = { _id: ObjectId.createFromHexString(req.body.sessId) };
 	const updatedSess = { $set: req.body.data };
-  const options = { upsert: false };
-  const result = await sessionCol.updateOne(filter, updatedSess, options);
+	const options = { upsert: false };
+	const result = await sessionCol.updateOne(filter, updatedSess, options);
+	res.send({ message: "Session was successfully rejected", result });
+});
+
+app.put("/rerequest", verifyToken, async (req, res) => {
+	console.log("rejection call");
+	const filter = { _id: ObjectId.createFromHexString(req.body.sessId) };
+	const updatedSess = { $set: req.body.data };
+	const options = { upsert: false };
+	const result = await sessionCol.updateOne(filter, updatedSess, options);
 	res.send({ message: "Session was successfully rejected", result });
 });
 
 app.delete("/deletesession/:id", verifyToken, async (req, res) => {
-  const query = { _id: ObjectId.createFromHexString(req.params.id)};
-  const result = await sessionCol.deleteOne(query);
-  res.send(result);
-})
+	const query = { _id: ObjectId.createFromHexString(req.params.id) };
+	const result = await sessionCol.deleteOne(query);
+	res.send(result);
+});
+
+// material stuff
+
+app.get("/material/:sessId", async (req, res) => {
+	const query = { sessId: req.params.sessId };
+	const material = await materialCol.findOne();
+	res.send(material);
+});
+
+app.put("/material", async (req, res) => {
+	const filter = { sessId: req.body.sessId };
+	const options = { upsert: true };
+	const result = materialCol.updateOne(filter, { $set: req.body }, options);
+  res.send({message:"Materials added successfully",result})
+});
