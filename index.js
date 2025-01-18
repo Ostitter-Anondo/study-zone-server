@@ -203,8 +203,17 @@ app.post("/newsession", verifyToken, async (req, res) => {
 	});
 });
 
+app.put("/editsession", verifyToken, async (req, res) => {
+  console.log(req.body);
+	const filter = { _id: ObjectId.createFromHexString(req.body.sessId) };
+	const updatedSess = { $set: req.body.data };
+  const options = { upsert: false };
+  const result = await sessionCol.updateOne(filter, updatedSess, options);
+  res.send({message: "Session was successfully edited", result});
+})
+
 app.put("/approved", verifyToken, async (req, res) => {
-	console.log(req.body);
+	console.log("approval call");
 	const filter = { _id: ObjectId.createFromHexString(req.body.sessId) };
 	const updatedSess = { $set: req.body.data };
   const options = { upsert: false };
@@ -213,10 +222,16 @@ app.put("/approved", verifyToken, async (req, res) => {
 });
 
 app.put("/rejected", verifyToken, async (req, res) => {
-	console.log(req.body);
+	console.log("rejection call");
 	const filter = { _id: ObjectId.createFromHexString(req.body.sessId) };
 	const updatedSess = { $set: req.body.data };
   const options = { upsert: false };
   const result = await sessionCol.updateOne(filter, updatedSess, options);
 	res.send({ message: "Session was successfully rejected", result });
 });
+
+app.delete("/deletesession/:id", verifyToken, async (req, res) => {
+  const query = { _id: ObjectId.createFromHexString(req.params.id)};
+  const result = await sessionCol.deleteOne(query);
+  res.send(result);
+})
