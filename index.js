@@ -169,37 +169,54 @@ app.put("/updatedata/:id", async (req, res) => {
 // admin stuff
 
 app.get("/users", verifyToken, async (req, res) => {
-  const cursor = userCol.find();
-  const users = await cursor.toArray();
-  res.send(users);
+	const cursor = userCol.find();
+	const users = await cursor.toArray();
+	res.send(users);
 });
-
 
 // session stuff
 
+app.get("/sessions", async (req, res) => {
+	const cursor = sessionCol.find();
+	const sessions = await cursor.toArray();
+	res.send(sessions);
+});
+
 app.get("/pendings", async (req, res) => {
-  const cursor = pendingCol.find();
-  const pendings = await cursor.toArray();
-  res.send(pendings);
-})
+	const cursor = pendingCol.find();
+	const pendings = await cursor.toArray();
+	res.send(pendings);
+});
+
+app.get("/rejecteds", async (req, res) => {
+	const cursor = rejectedCol.find();
+	const rejected = await cursor.toArray();
+	res.send(rejected);
+});
 
 app.post("/newsession", verifyToken, async (req, res) => {
-  console.log("new session add requested");
-  const result = await pendingCol.insertOne(req.body);
-  res.send({result, message: "Request for new session has been submitted for approval"});
-})
+	console.log("new session add requested");
+	const result = await sessionCol.insertOne(req.body);
+	res.send({
+		result,
+		message: "Request for new session has been submitted for approval",
+	});
+});
 
-app.post("/approved", verifyToken, async (req, res) => {
-  console.log("session approval call");
-  const result = await sessionCol.insertOne(req.body.session);
-  const query = { _id: ObjectId.createFromHexString(req.body.sessId)};
-  const deletion = await pendingCol.deleteOne(query);
-  res.send({message: "Session was successfully approved", result, deletion});
-})
-app.post("/rejected", verifyToken, async (req, res) => {
-  console.log("session rejection call");
-  const result = await rejectedCol.insertOne(req.body.session);
-  const query = { _id: ObjectId.createFromHexString(req.body.sessId)};
-  const deletion = await pendingCol.deleteOne(query);
-  res.send({message: "Session was successfully rejected", result, deletion});
-})
+app.put("/approved", verifyToken, async (req, res) => {
+	console.log(req.body);
+	const filter = { _id: ObjectId.createFromHexString(req.body.sessId) };
+	const updatedSess = { $set: req.body.data };
+  const options = { upsert: false };
+  const result = await sessionCol.updateOne(filter, updatedSess, options);
+	res.send({ message: "Session was successfully approved", result });
+});
+
+app.put("/rejected", verifyToken, async (req, res) => {
+	console.log(req.body);
+	const filter = { _id: ObjectId.createFromHexString(req.body.sessId) };
+	const updatedSess = { $set: req.body.data };
+  const options = { upsert: false };
+  const result = await sessionCol.updateOne(filter, updatedSess, options);
+	res.send({ message: "Session was successfully rejected", result });
+});
