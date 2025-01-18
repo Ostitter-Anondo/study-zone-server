@@ -171,9 +171,30 @@ app.put("/updatedata/:id", async (req, res) => {
 // admin stuff
 
 app.get("/users", verifyToken, async (req, res) => {
-	const cursor = userCol.find();
-	const users = await cursor.toArray();
-	res.send(users);
+	const search = req.query.search;
+	if (search === "AllUsers") {
+		const cursor = userCol.find();
+		const users = await cursor.toArray();
+		res.send(users);
+	} else {
+		const cursor = userCol.find({
+			$or: [
+				{ email: { $regex: search, $options: "i" } },
+				{ name: { $regex: search, $options: "i" } },
+			],
+		});
+		const users = await cursor.toArray();
+		res.send(users);
+	}
+});
+
+app.put("/rolechange", verifyToken, async (req, res) => {
+	console.log(req.body);
+	const filter = { uid: req.body.uid };
+	const updatedUser = { $set: { role: req.body.role } };
+	const options = { upsert: false };
+	const result = await userCol.updateOne(filter, updatedUser, options);
+	res.send({ message: "role successfully changed", result });
 });
 
 // session stuff
@@ -253,10 +274,16 @@ app.delete("/deletesession/:id", verifyToken, async (req, res) => {
 
 // material stuff
 
+app.get("/allmaterials", async (req, res) => {
+	const cursor = materialCol.find();
+	const result = await cursor.toArray();
+	res.send(result);
+});
+
 app.get("/allmymaterials/:email", async (req, res) => {
 	const cursor = materialCol.find({ email: req.params.email });
 	const result = await cursor.toArray();
-  res.send(result);
+	res.send(result);
 });
 
 app.get("/material/:sessId", async (req, res) => {
@@ -265,16 +292,16 @@ app.get("/material/:sessId", async (req, res) => {
 	res.send(material);
 });
 
-app.put("/material", async (req, res) => {
+app.put("/material", verifyToken, async (req, res) => {
 	const filter = { sessId: req.body.sessId };
 	const options = { upsert: true };
 	const result = materialCol.updateOne(filter, { $set: req.body }, options);
 	res.send({ message: "Materials added successfully", result });
 });
 
-app.delete("/material/:id", async (req, res) => {
-  console.log("delete request for a material");
-  const query = { _id: ObjectId.createFromHexString(req.params.id) };
+app.delete("/material/:id", verifyToken, async (req, res) => {
+	console.log("delete request for a material");
+	const query = { _id: ObjectId.createFromHexString(req.params.id) };
 	const result = await materialCol.deleteOne(query);
-  res.send({message: "material successfully deleted", result});
-})
+	res.send({ message: "material successfully deleted", result });
+});
