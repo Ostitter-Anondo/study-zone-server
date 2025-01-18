@@ -253,9 +253,15 @@ app.delete("/deletesession/:id", verifyToken, async (req, res) => {
 
 // material stuff
 
+app.get("/allmymaterials/:email", async (req, res) => {
+	const cursor = materialCol.find({ email: req.params.email });
+	const result = await cursor.toArray();
+  res.send(result);
+});
+
 app.get("/material/:sessId", async (req, res) => {
 	const query = { sessId: req.params.sessId };
-	const material = await materialCol.findOne();
+	const material = await materialCol.findOne(query);
 	res.send(material);
 });
 
@@ -263,5 +269,12 @@ app.put("/material", async (req, res) => {
 	const filter = { sessId: req.body.sessId };
 	const options = { upsert: true };
 	const result = materialCol.updateOne(filter, { $set: req.body }, options);
-  res.send({message:"Materials added successfully",result})
+	res.send({ message: "Materials added successfully", result });
 });
+
+app.delete("/material/:id", async (req, res) => {
+  console.log("delete request for a material");
+  const query = { _id: ObjectId.createFromHexString(req.params.id) };
+	const result = await materialCol.deleteOne(query);
+  res.send({message: "material successfully deleted", result});
+})
