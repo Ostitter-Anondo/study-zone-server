@@ -5,6 +5,7 @@ const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 require("dotenv").config();
+const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
 const app = express();
 
@@ -206,18 +207,29 @@ app.get("/sessions", async (req, res) => {
 });
 
 app.get("/countapproved", async (req, res) => {
-  const count = await sessionCol.countDocuments({status: "approved"});
-  res.send({count})
-})
+	console.log("getcounted");
+	const count = await sessionCol.countDocuments({ status: "approved" });
+	console.log(count);
+	res.send({ count: count });
+});
+
+app.get("/indivsession/:id", verifyToken, async (req, res) => {
+	const query = { _id: ObjectId.createFromHexString(req.params.id) };
+	const session = await sessionCol.findOne(query);
+	res.send({ session });
+});
 
 app.get("/allapproved", async (req, res) => {
-  const page = Number(req.query.page);
-  const size = 6;
-  console.log(page)
+	const page = Number(req.query.page);
+	const size = 6;
+	console.log(page);
 	const filter = { status: "approved" };
-  const cursor = sessionCol.find(filter).skip(size*page).limit(size);
-  const sessions = await cursor.toArray();
-  res.send(sessions);
+	const cursor = sessionCol
+		.find(filter)
+		.skip(size * page)
+		.limit(size);
+	const sessions = await cursor.toArray();
+	res.send(sessions);
 });
 
 app.get("/mysessions/:uid", async (req, res) => {
@@ -319,4 +331,24 @@ app.delete("/material/:id", verifyToken, async (req, res) => {
 	const query = { _id: ObjectId.createFromHexString(req.params.id) };
 	const result = await materialCol.deleteOne(query);
 	res.send({ message: "material successfully deleted", result });
+});
+
+// payment
+
+app.post("/create-payment-intent", async (req, res) => {
+	if (req.body.price) {
+		const { price } = req.body;
+		const amount = parseInt(price * 100);
+    console.log(amount, "taka paisi")
+		const paymentIntent = await stripe.paymentIntents.create({
+			amount: amount,
+			currency: "usd",
+			payment_method_types: ["card"],
+		});
+		res.send({
+			clientSecret: paymentIntent.client_secret,
+		});
+	} else {
+		res.status(400).send("no payment was requested");
+	}
 });
