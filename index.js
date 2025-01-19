@@ -326,6 +326,23 @@ app.delete("/material/:id", verifyToken, async (req, res) => {
 
 // book session handle
 
+app.get("/mybooked", verifyToken, async (req, res) => {
+	const filter = req.query.booked
+		.split(",")
+		.map((booking) => ObjectId.createFromHexString(booking));
+	const cursor = sessionCol.find({ _id: { $in: filter } });
+	const result = await cursor.toArray();
+	res.send(result);
+});
+
+app.get("/mybookedmaterials", verifyToken, async (req, res) => {
+	console.log(req.query);
+	const filter = req.query.booked.split(",");
+	const cursor = materialCol.find({ sessId: { $in: filter } });
+	const result = await cursor.toArray();
+	res.send(result);
+});
+
 app.put("/booking", verifyToken, async (req, res) => {
 	console.log("booked list modification");
 	const filter = { uid: req.user.uid };
@@ -383,4 +400,33 @@ app.delete("/notes", verifyToken, async (req, res) => {
 	const filter = { _id: ObjectId.createFromHexString(req.query.noteId) };
 	const result = await noteCol.deleteOne(filter);
 	res.send({ message: "note successfully deleted", result });
+});
+
+// reviews
+
+app.get("/review", verifyToken, async (req, res) => {
+	const query = { sessId: req.query.sessId };
+	const cursor = reviewCol.find(query);
+	const result = await cursor.toArray();
+	res.send(result);
+});
+
+app.put("/review", verifyToken, async (req, res) => {
+	console.log("review add/edit request");
+	const filter = { uid: req.user.uid };
+	const options = { upsert: true };
+	const result = await reviewCol.updateOne(filter, { $set: req.body }, options);
+	res.send({ message: "review edited!", result });
+});
+
+app.post("/review", verifyToken, async (req, res) => {
+	console.log("review add/edit request");
+	const result = await reviewCol.insertOne(req.body);
+	res.send({ message: "review added!", result });
+});
+
+app.delete("/review", verifyToken, async (req, res) => {
+	const filter = { _id: ObjectId.createFromHexString(req.query.reviewId) };
+	const result = await reviewCol.deleteOne(filter);
+	res.send({ message: "review successfully deleted", result });
 });
