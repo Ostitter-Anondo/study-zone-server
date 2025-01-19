@@ -107,21 +107,12 @@ app.get("/jwtverify", verifyToken, async (req, res) => {
 
 // auth stuff
 
-app.get("/login", async (req, res) => {
-	const token = req.cookies.studyzonetoken;
-	if (!token) {
-		return res.send({ message: "no token" });
-	}
-	jwt.verify(token, process.env.TOKEN_SECRET, (err, decoded) => {
-		if (err) {
-			return res.send({ message: "token fny" });
-		}
-		console.log(decoded);
-	});
-	const material = await materialCol.findOne({
-		sessId: "678b8920caf8fbd4b6e5b9c3",
-	});
-	res.send({ message: "moja", material });
+app.get("/login", verifyToken, async (req, res) => {
+	const query = { uid: req.user.uid };
+	console.log(query);
+	const booked = await bookedCol.findOne(query);
+	console.log(booked);
+	res.send({ message: "moja", booked });
 });
 
 app.get("/user/:id", async (req, res) => {
@@ -333,13 +324,24 @@ app.delete("/material/:id", verifyToken, async (req, res) => {
 	res.send({ message: "material successfully deleted", result });
 });
 
+// book session handle
+
+app.put("/booking", verifyToken, async (req, res) => {
+	console.log("booked list modification");
+	const filter = { uid: req.user.uid };
+	const options = { upsert: false };
+	const result = await bookedCol.updateOne(filter, { $set: req.body }, options);
+	const booked = await bookedCol.findOne(filter);
+	res.send({ message: "Materials added successfully", result, booked });
+});
+
 // payment
 
 app.post("/create-payment-intent", async (req, res) => {
 	if (req.body.price) {
 		const { price } = req.body;
 		const amount = parseInt(price * 100);
-    console.log(amount, "taka paisi")
+		console.log(amount, "taka paisi");
 		const paymentIntent = await stripe.paymentIntents.create({
 			amount: amount,
 			currency: "usd",
@@ -351,4 +353,34 @@ app.post("/create-payment-intent", async (req, res) => {
 	} else {
 		res.status(400).send("no payment was requested");
 	}
+});
+
+// student notes
+
+app.get("/notes", verifyToken, async (req, res) => {
+	const query = { uid: req.user.uid };
+	const cursor = noteCol.find(query);
+	const result = await cursor.toArray();
+	res.send(result);
+});
+
+app.post("/notes", verifyToken, async (req, res) => {
+	console.log("new note added");
+	const result = await noteCol.insertOne(req.body);
+	res.send({ message: "note was added successfully", result });
+});
+
+app.put("/notes", verifyToken, async (req, res) => {
+	console.log("note edit requested");
+	const filter = { _id: ObjectId.createFromHexString(req.query.noteId) };
+	const options = { upsert: false };
+	const result = await noteCol.updateOne(filter, { $set: req.body }, options);
+	res.send({ message: "note successfully edited", result });
+});
+
+app.delete("/notes", verifyToken, async (req, res) => {
+	console.log("note deletion requested");
+	const filter = { _id: ObjectId.createFromHexString(req.query.noteId) };
+	const result = await noteCol.deleteOne(filter);
+	res.send({ message: "note successfully deleted", result });
 });
