@@ -56,6 +56,7 @@ const noteCol = database.collection("notes");
 const sessionCol = database.collection("sessions");
 const materialCol = database.collection("materials");
 const bookedCol = database.collection("booked");
+const announcementCol = database.collection("announcements");
 
 // general landing
 
@@ -136,6 +137,31 @@ app.post("/newuser", async (req, res) => {
 	console.log(`creating new user with data`, newUser);
 	const result = await userCol.insertOne(newUser);
 	res.send(result);
+});
+
+app.put("/socialuser", async (req, res) => {
+	const findUser = await userCol.findOne({ uid: req.body.uid });
+	if (findUser) {
+		const findBooked = await bookedCol.findOne({ uid: req.body.uid });
+		res.send({ user: findUser, booked: findBooked });
+	} else {
+		const newBookings = { uid: req.body.uid, wishlist: [] };
+		const bookedData = await bookedCol.insertOne(newBookings);
+		const newUser = {
+			uid: req.body.uid,
+			email: req.body.email,
+			name: req.body.name,
+			photo: req.body.photo,
+			role: req.body.role,
+			bookedId: bookedData.insertedId,
+		};
+		console.log(`creating new user with data`, newUser);
+		const result = await userCol.insertOne(newUser);
+		const query = { uid: req.body.uid };
+		const user = await userCol.findOne(query);
+		const booked = await bookedCol.findOne(query);
+		res.send({ user, booked, result });
+	}
 });
 
 // role verification
@@ -327,12 +353,16 @@ app.delete("/material/:id", verifyToken, async (req, res) => {
 // book session handle
 
 app.get("/mybooked", verifyToken, async (req, res) => {
-	const filter = req.query.booked
-		.split(",")
-		.map((booking) => ObjectId.createFromHexString(booking));
-	const cursor = sessionCol.find({ _id: { $in: filter } });
-	const result = await cursor.toArray();
-	res.send(result);
+	if (req.query.booked.length > 0) {
+		const filter = req.query.booked
+			.split(",")
+			.map((booking) => ObjectId.createFromHexString(booking));
+		const cursor = sessionCol.find({ _id: { $in: filter } });
+		const result = await cursor.toArray();
+		res.send(result);
+	} else {
+		res.send([]);
+	}
 });
 
 app.get("/mybookedmaterials", verifyToken, async (req, res) => {
@@ -430,3 +460,37 @@ app.delete("/review", verifyToken, async (req, res) => {
 	const result = await reviewCol.deleteOne(filter);
 	res.send({ message: "review successfully deleted", result });
 });
+
+// announcement
+
+app.get("/countannouncements", async (req, res) => {
+	console.log("getcounted other");
+	const count = await announcementCol.countDocuments();
+	console.log(count);
+	res.send({ count: count });
+});
+
+app.get("/announcement", async (req, res) => {
+	const page = Number(req.query.page);
+	const size = 6;
+	console.log(page);
+	const cursor = announcementCol
+		.find()
+		.skip(size * page)
+		.limit(size);
+	const sessions = await cursor.toArray();
+	res.send(sessions);
+});
+
+app.post("/makeannouncement", verifyToken, async (req, res) => {
+	console.log("announcement was made");
+	const result = await announcementCol.insertOne(req.body);
+	res.send({ message: "new announcement successfully made", result });
+});
+
+app.delete("/announcement", verifyToken, async (req, res) => {
+  console.log("deleting an announcement");
+	const filter = { _id: ObjectId.createFromHexString(req.query.announcementId) };
+	const result = await announcementCol.deleteOne(filter);
+	res.send({ message: "review successfully deleted", result });
+})
