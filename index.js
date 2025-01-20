@@ -265,6 +265,18 @@ app.get("/myapproved/:uid", async (req, res) => {
 	res.send(sessions);
 });
 
+app.get("/homepagestuff", async (req, res) => {
+	const now = new Date().getTime();
+	const querySess = { status: "approved", regEnd: { $gt: now } };
+	const options = { sort: { regEnd: 1 } };
+	const queryInst = { role: "instructor" };
+	const cursorA = sessionCol.find(querySess, options).limit(6);
+	const cursorB = userCol.find(queryInst);
+	const sessions = await cursorA.toArray();
+	const instructors = await cursorB.toArray();
+	res.send({ sessions, instructors });
+});
+
 app.post("/newsession", verifyToken, async (req, res) => {
 	console.log("new session add requested");
 	const result = await sessionCol.insertOne(req.body);
@@ -489,8 +501,10 @@ app.post("/makeannouncement", verifyToken, async (req, res) => {
 });
 
 app.delete("/announcement", verifyToken, async (req, res) => {
-  console.log("deleting an announcement");
-	const filter = { _id: ObjectId.createFromHexString(req.query.announcementId) };
+	console.log("deleting an announcement");
+	const filter = {
+		_id: ObjectId.createFromHexString(req.query.announcementId),
+	};
 	const result = await announcementCol.deleteOne(filter);
 	res.send({ message: "review successfully deleted", result });
-})
+});
