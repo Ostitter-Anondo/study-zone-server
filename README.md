@@ -4,4 +4,4 @@
 
 <h2>🚀 Client Side</h2>
 
-[https://github.com/Programming-Hero-Web-Course4/b10a12-client-side-Ostitter-Anondo](https://github.com/Programming-Hero-Web-Course4/b10a12-client-side-Ostitter-Anondo)
+[https://github.com/Ostitter-Anondo/study-zone-client](https://github.com/Ostitter-Anondo/study-zone-client)
